@@ -1,0 +1,54 @@
+CMPE341- DATABASE DESIGN & MANAGEMENT PROJECT GUIDELINES
+Students (as a group work (3-4 students)) are requested to design a database for a real-life problem. The project topic will be chosen by the instructor and needs to be approved by the instructor. 
+Project Grading (15% of the course)
+Some of the project groups may work on the same topics. Since the requirements and the scope of the project is different, these topics are accepted.
+
+PROJECT REPORT
+For the final report, you should prepare a word document. Your report should include the following chapters (corresponding to the steps): 
+A cover page: Title of your project, Information about group members
+Chapter 1. Introduction (10 points) 
+1.	Introduction- choosing and proposing a problem 
+•	Brief explanation on your project topic (a real-life problem) 
+Chapter 2. Requirements (10 points) 
+2.	Requirement collection & analysis phase 
+•	List the requirements – What do the users expect from the developed system? You can communicate with customer to identify essential "real world" data that needs to be kept in the database. Surveys, questionnaires, and interviews forms used to gather information from the customer can be included. You can also attach forms/reports used by customer in the current/existing system. A screenshot of a sample web application can be used. 
+•	Distinguish data that needs to be stored and operations needed on the data. 
+Chapter 3. ER/EER Diagram of the System (15 points) 
+3.	Conceptual schema design phase 
+•	Entities are formed. (Please include at least 5, at most 10 entities)  
+•	ER/EER data model is designed. 
+Chapter 4. Logical Design (15 points) 
+4.	Logical data modeling
+ ER/EER model is mapped to the logical data model. Primary keys and foreign keys should be identified. 
+Chapter 5. Physical Design in Oracle/postgres (20 points)
+5.	Database choice and implementation 
+•	Creating Final tables (relations) with constraints
+•	Data loading (at least 3 records per table) 
+•	Query design (3 meaningful queries along with their results) 
+Please include complex queries: at least one query example for: 
+1. Display data from multiple tables (join), 
+2. Query including group-by statement, order-by statement. 
+3. Subquery.
+Chapter 6. Web Application/ Interface (15 points)
+·	Upload the web app project files to a public GitHub repository and add all team members as collaborators. The repository name must contain the project name and group number, e.g. product-management-system-group-1.
+·	Write the repository link on the drive file.( Excel link will be shared on Moodle before the presentation.)
+·	The project must be reproducible with Docker: after cloning the repository, the single command docker compose up must start the database (with tables and sample data) and the web app.
+·	The web app must have authentication and authorization: users log in with a username and password, passwords are stored hashed, and there are at least two roles with different permissions (e.g. admin and standard user).
+·	The app must be capable of Insert, Delete and Update operations.
+·	Add a README.md with the address to open and a test username and password for each role.
+·	You can use any tools to create the interface and connect to the database.
+Chapter 7. Deployment (15 points)
+·	Get a server. Register to a cloud provider and create a virtual machine with Linux. Cloud providers offer free credits or free tiers to students. The provider gives your server a public IP address. ( For providers, you can use Azure for Students, Oracle Free Tier, AWS Free Tier, Supabase etc.)
+·	Set up the server. Connect to the server with SSH and install necessary software. Clone your project to server.
+·	Open the app to internet. Make necessary network configurations in the app and virtual machine. Check that the app opens when you type the server’s IP address in a browser. 
+Domain Setup (BONUS - 10 points)
+·	Get a domain name from registrar. It doesn’t have to be related to your project. Dont pay more than 50 TL for the domain name.
+FINAL REPORT SUBMISSION: 29.11.2026
+Format of the final report
+•	The report should be in English and prepared using a word processor. 
+•	Your report should include a cover page including the title of your project and group members. Each step should be written as separate chapters. 
+•	All margins should be set to 2.5 cm. Font size is 12 points, and font type is Times New Roman. Line spacing is 1.5, justified.
+•	Include references at the end of your report, for the resources used.
+•	Please submit your project report as a single file from Moodle. 
+Only team leader can submit the file. Late submissions will not be graded.
+Presentations 1-16 dec 2026

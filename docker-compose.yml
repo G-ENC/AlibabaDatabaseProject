@@ -1,0 +1,36 @@
+# Start everything with:  docker compose up --build
+# Then open http://localhost
+services:
+  web:
+    build: ./client
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+  api:
+    build: ./server
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # DATABASE_URL: postgres://app:app@db:5432/marketplace   # used once the db service below is enabled
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+
+  # Added when the database is connected:
+  # db:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: app
+  #     POSTGRES_PASSWORD: app
+  #     POSTGRES_DB: marketplace
+  #   volumes:
+  #     - ./db/init:/docker-entrypoint-initdb.d   # schema + sample data run on first start
+  #     - pgdata:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U app -d marketplace"]
+  #     interval: 5s
+  #     retries: 10
+# volumes:
+#   pgdata:

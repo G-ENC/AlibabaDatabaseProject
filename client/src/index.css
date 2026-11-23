@@ -1,0 +1,27 @@
+/* Pico.css provides the base look; these are small additions. */
+nav.top { border-bottom: 1px solid var(--pico-muted-border-color); margin-bottom: 1.5rem; }
+nav.top .brand { font-weight: 700; font-size: 1.2rem; }
+
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
+.product-grid article { margin: 0; display: flex; flex-direction: column; justify-content: space-between; }
+.price { font-size: 1.25rem; font-weight: 700; }
+.muted { color: var(--pico-muted-color); font-size: 0.875rem; }
+.stars { color: #e0a800; letter-spacing: 0.1em; }
+
+.badge { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 600; background: var(--pico-muted-border-color); }
+.badge.paid { background: #cfe2ff; color: #084298; }
+.badge.shipped { background: #fff3cd; color: #664d03; }
+.badge.delivered { background: #d1e7dd; color: #0f5132; }
+.badge.cancelled { background: #f8d7da; color: #842029; }
+
+.error { color: #c0392b; font-weight: 600; }
+.row-actions { display: flex; gap: 0.5rem; }
+.row-actions button, td button, td a[role="button"] { margin: 0; padding: 0.25rem 0.7rem; font-size: 0.85rem; }
+.inline-form { display: flex; gap: 0.5rem; align-items: end; }
+.inline-form > * { margin-bottom: 0; }
+.inline-form label { flex: 1; }
+.inline-form button { width: auto; flex: none; }
+.filters { display: grid; grid-template-columns: 2fr 1fr auto; gap: 0.75rem; align-items: end; }
+.filters > * { margin-bottom: 0; }
+.review { border-top: 1px solid var(--pico-muted-border-color); padding: 0.75rem 0; }
+.table-wrap { overflow-x: auto; }
