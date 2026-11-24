@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "skills": {
+    "improve": {
+      "source": "shadcn/improve",
+      "commit": "cac56e1ebd3c279aa9153616cfeac7b174ab90f9",
+      "sourceType": "github",
+      "skillPath": "skills/improve/SKILL.md",
+      "computedHash": "9e8fe9ea4f9a0e4155801d1624e38ca23798467bb88b447efaa5120f7b1fe802"
+    },
+    "improve-codebase-architecture": {
+      "source": "mattpocock/skills",
+      "commit": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
+      "computedHash": "f0820b18426a7d9a6c823a890988ba0ac70bf0fd596d30d7ef07c88558728c23"
+    },
+    "thermo-nuclear-code-quality-review": {
+      "source": "cursor/plugins",
+      "commit": "7a583913eb1b8d1a0ee76753d1a2cf072e7b54f9",
+      "sourceType": "github",
+      "skillPath": "cursor-team-kit/skills/thermo-nuclear-code-quality-review/SKILL.md",
+      "computedHash": "705eb32106f0fec9c9e9b4afccb6156f17f6e8829368e54cd5b53f10e4374340"
+    }
+  }
+}
