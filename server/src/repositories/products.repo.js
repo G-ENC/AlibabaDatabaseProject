@@ -1,72 +1,75 @@
-import { db, nextId } from '../data/mockData.js';
+import { many, one, run } from '../db.js';
 import { HttpError } from '../utils/httpError.js';
-import { pick } from '../utils/validate.js';
 
-const FIELDS = ['name', 'description', 'unit_price', 'stock_quantity', 'min_order_qty', 'supplier_id', 'category_id'];
-
-// Adds supplier name, category name and review stats (a JOIN + AVG once the DB exists).
-function withJoins(p) {
-  const reviews = db.reviews.filter((r) => r.product_id === p.product_id);
-  const sum = reviews.reduce((total, r) => total + r.rating, 0);
-  return {
-    ...p,
-    supplier_name: db.suppliers.find((s) => s.supplier_id === p.supplier_id)?.company_name ?? null,
-    category_name: db.categories.find((c) => c.category_id === p.category_id)?.name ?? null,
-    avg_rating: reviews.length ? Math.round((sum / reviews.length) * 10) / 10 : null,
-    review_count: reviews.length,
-  };
-}
-
-// A category plus all its sub-categories (so "Electronics" also shows smartphones).
-function categoryAndDescendants(id) {
-  const ids = [id];
-  for (const child of db.categories.filter((c) => c.parent_id === id)) {
-    ids.push(...categoryAndDescendants(child.category_id));
-  }
-  return ids;
-}
+// Product with supplier name, category name and review stats (JOIN + LEFT JOIN + AVG/COUNT).
+const SELECT = `
+  SELECT p.*,
+         s.company_name            AS supplier_name,
+         c.name                    AS category_name,
+         ROUND(AVG(r.rating), 1)   AS avg_rating,
+         COUNT(r.review_id)        AS review_count
+  FROM product p
+  JOIN supplier s     ON s.supplier_id = p.supplier_id
+  JOIN category c     ON c.category_id = p.category_id
+  LEFT JOIN review r  ON r.product_id  = p.product_id`;
+const GROUP = 'GROUP BY p.product_id, s.company_name, c.name';
 
 export async function list({ search, categoryId, supplierId } = {}) {
-  let rows = db.products;
+  const where = [];
+  const params = [];
   if (search) {
-    const q = search.toLowerCase();
-    rows = rows.filter((p) => p.name.toLowerCase().includes(q) || (p.description ?? '').toLowerCase().includes(q));
+    params.push(`%${search}%`);
+    where.push(`(p.name ILIKE $${params.length} OR p.description ILIKE $${params.length})`);
   }
   if (categoryId) {
-    const ids = categoryAndDescendants(categoryId);
-    rows = rows.filter((p) => ids.includes(p.category_id));
+    // The category plus all its sub-categories (so "Electronics" also shows smartphones).
+    params.push(categoryId);
+    where.push(`p.category_id IN (
+      WITH RECURSIVE tree AS (
+        SELECT category_id FROM category WHERE category_id = $${params.length}
+        UNION ALL
+        SELECT c2.category_id FROM category c2 JOIN tree t ON c2.parent_id = t.category_id
+      )
+      SELECT category_id FROM tree)`);
   }
-  if (supplierId) rows = rows.filter((p) => p.supplier_id === supplierId);
-  return rows.map(withJoins);
+  if (supplierId) {
+    params.push(supplierId);
+    where.push(`p.supplier_id = $${params.length}`);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  return many(`${SELECT} ${whereSql} ${GROUP} ORDER BY p.product_id`, params);
 }
 
 export async function getById(id) {
-  const p = db.products.find((x) => x.product_id === id);
-  return p ? withJoins(p) : null;
+  return one(`${SELECT} WHERE p.product_id = $1 ${GROUP}`, [id]);
 }
 
-export async function create(data) {
-  const product = { product_id: nextId('products', 'product_id'), description: null, created_at: new Date().toISOString(), ...pick(data, FIELDS) };
-  db.products.push(product);
-  return withJoins(product);
+export async function create(p) {
+  const { product_id } = await one(
+    `INSERT INTO product (name, description, unit_price, stock_quantity, min_order_qty, supplier_id, category_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING product_id`,
+    [p.name, p.description, p.unit_price, p.stock_quantity, p.min_order_qty, p.supplier_id, p.category_id]
+  );
+  return getById(product_id);
 }
 
-export async function update(id, data) {
-  const p = db.products.find((x) => x.product_id === id);
-  if (!p) return null;
-  Object.assign(p, pick(data, FIELDS));
-  return withJoins(p);
+export async function update(id, p) {
+  const changed = await run(
+    `UPDATE product
+     SET name = $2, description = $3, unit_price = $4, stock_quantity = $5, min_order_qty = $6, supplier_id = $7, category_id = $8
+     WHERE product_id = $1`,
+    [id, p.name, p.description, p.unit_price, p.stock_quantity, p.min_order_qty, p.supplier_id, p.category_id]
+  );
+  return changed ? getById(id) : null;
 }
 
 export async function hasOrders(id) {
-  return db.order_items.some((i) => i.product_id === id);
+  return Boolean(await one('SELECT 1 FROM order_item WHERE product_id = $1 LIMIT 1', [id]));
 }
 
 export async function remove(id) {
-  const index = db.products.findIndex((p) => p.product_id === id);
-  if (index === -1) return false;
+  // order_item.product_id is ON DELETE RESTRICT; check first for a readable message.
   if (await hasOrders(id)) throw new HttpError(409, 'Product appears in orders and cannot be deleted');
-  db.reviews = db.reviews.filter((r) => r.product_id !== id); // reviews are deleted with the product
-  db.products.splice(index, 1);
-  return true;
+  // Its reviews are removed by ON DELETE CASCADE.
+  return (await run('DELETE FROM product WHERE product_id = $1', [id])) > 0;
 }

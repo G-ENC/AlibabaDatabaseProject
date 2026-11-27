@@ -28,10 +28,12 @@ export default function OrderDetail() {
     }
   };
 
-  const isOwner = order.user_id === user.user_id;
+  const isBuyer = order.user_id === user.user_id && !user.is_admin;
+  const canCancel = order.status === 'PENDING' || order.status === 'PAID';
+  const payBalance = () => run(() => api.post(`/orders/${id}/pay-balance`));
   const cancelOwn = () => window.confirm('Cancel this order?') && run(() => api.patch(`/orders/${id}/cancel`));
-  const cancelAsAdmin = () => window.confirm('Cancel this order?') && run(() => api.patch(`/orders/${id}/status`, { status: 'cancelled' }));
-  const markDelivered = () => run(() => api.patch(`/orders/${id}/status`, { status: 'delivered' }));
+  const cancelAsAdmin = () => window.confirm('Cancel this order?') && run(() => api.patch(`/orders/${id}/status`, { status: 'CANCELLED' }));
+  const markDelivered = () => run(() => api.patch(`/orders/${id}/status`, { status: 'DELIVERED' }));
   const ship = (e) => {
     e.preventDefault();
     run(() => api.post(`/orders/${id}/shipment`, { carrier, tracking_number: tracking }));
@@ -64,29 +66,39 @@ export default function OrderDetail() {
 
       <div className="grid">
         <article>
-          <h3>Payment</h3>
-          {order.payment ? (
-            <p>{money(order.payment.amount)} by {order.payment.method.replace('_', ' ')} on {date(order.payment.payment_date)}</p>
-          ) : <p className="muted">No payment recorded.</p>}
+          <h3>Payments</h3>
+          {order.payments.length === 0 && <p className="muted">No payment recorded.</p>}
+          {order.payments.map((p) => (
+            <p key={p.payment_id}>
+              <strong>{p.payment_type.toLowerCase()}</strong> {money(p.amount)} by {p.method.replace('_', ' ')} on {date(p.payment_date)}
+            </p>
+          ))}
+          <p className="muted">
+            Paid {money(order.paid)}
+            {order.status !== 'CANCELLED' && order.remaining > 0 && <> · Remaining <strong>{money(order.remaining)}</strong></>}
+          </p>
+          {isBuyer && order.status === 'PENDING' && (
+            <button onClick={payBalance}>Pay balance {money(order.remaining)}</button>
+          )}
         </article>
         <article>
           <h3>Shipment</h3>
           {order.shipment ? (
             <p>{order.shipment.carrier}, tracking {order.shipment.tracking_number}<br />
-              Shipped {date(order.shipment.ship_date)} · <strong>{order.shipment.delivery_status.replace('_', ' ')}</strong></p>
-          ) : <p className="muted">Not shipped yet.</p>}
+              Shipped {date(order.shipment.ship_date)} · <StatusBadge status={order.shipment.delivery_status} /></p>
+          ) : <p className="muted">{order.status === 'PENDING' ? 'Ships after the balance is paid.' : 'Not shipped yet.'}</p>}
         </article>
       </div>
 
       {actionError && <p className="error">{actionError}</p>}
 
-      {/* buyer: cancel while still paid */}
-      {isOwner && !user.is_admin && order.status === 'paid' && (
+      {/* buyer: cancel before shipping */}
+      {isBuyer && canCancel && (
         <button className="secondary" onClick={cancelOwn}>Cancel order</button>
       )}
 
-      {/* admin: ship, deliver, cancel */}
-      {user.is_admin && order.status === 'paid' && (
+      {/* admin: ship (only when fully paid), deliver, cancel */}
+      {user.is_admin && order.status === 'PAID' && (
         <article>
           <h3>Ship this order</h3>
           <form onSubmit={ship} className="inline-form">
@@ -94,10 +106,10 @@ export default function OrderDetail() {
             <label>Tracking number <input value={tracking} onChange={(e) => setTracking(e.target.value)} required /></label>
             <button type="submit">Create shipment</button>
           </form>
-          <button className="secondary" onClick={cancelAsAdmin} style={{ marginTop: '1rem' }}>Cancel order</button>
         </article>
       )}
-      {user.is_admin && order.status === 'shipped' && <button onClick={markDelivered}>Mark as delivered</button>}
+      {user.is_admin && canCancel && <button className="secondary" onClick={cancelAsAdmin}>Cancel order</button>}
+      {user.is_admin && order.status === 'SHIPPED' && <button onClick={markDelivered}>Mark as delivered</button>}
     </>
   );
 }

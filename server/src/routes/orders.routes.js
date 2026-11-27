@@ -6,7 +6,9 @@ import * as orders from '../repositories/orders.repo.js';
 
 const router = Router();
 const METHODS = ['card', 'bank_transfer'];
-const STATUSES = ['paid', 'shipped', 'delivered', 'cancelled'];
+const STATUSES = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+// Statuses an admin can set directly (PAID comes from the balance payment, SHIPPED from a shipment).
+const ADMIN_STATUSES = ['CANCELLED', 'DELIVERED'];
 
 // Loads an order; only its owner or an admin may see it.
 async function loadVisibleOrder(req) {
@@ -57,23 +59,32 @@ router.get('/orders/:id', requireAuth, async (req, res) => {
   res.json(await loadVisibleOrder(req));
 });
 
-// The owner cancels their own order while it is still "paid".
+// The buyer pays the remaining balance (PENDING -> PAID). Body: { method } optional, defaults to the deposit's method.
+router.post('/orders/:id/pay-balance', requireAuth, async (req, res) => {
+  const order = await loadVisibleOrder(req);
+  if (order.user_id !== req.user.user_id) throw new HttpError(403, 'Only the buyer can pay for this order');
+  const method = req.body?.method;
+  if (method !== undefined && !METHODS.includes(method)) throw new HttpError(400, `method must be one of: ${METHODS.join(', ')}`);
+  res.status(201).json(await orders.payBalance(order.order_id, method));
+});
+
+// The owner cancels their own order while it is still PENDING or PAID.
 router.patch('/orders/:id/cancel', requireAuth, async (req, res) => {
   const order = await loadVisibleOrder(req);
   if (order.user_id !== req.user.user_id) throw new HttpError(403, 'Only the buyer can cancel here');
-  res.json(await orders.setStatus(order.order_id, 'cancelled'));
+  res.json(await orders.setStatus(order.order_id, 'CANCELLED'));
 });
 
-// Admin: paid -> cancelled, shipped -> delivered.
+// Admin: PENDING/PAID -> CANCELLED, SHIPPED -> DELIVERED.
 router.patch('/orders/:id/status', requireAuth, requireAdmin, async (req, res) => {
   const status = req.body?.status;
-  if (!STATUSES.includes(status)) throw new HttpError(400, `status must be one of: ${STATUSES.join(', ')}`);
+  if (!ADMIN_STATUSES.includes(status)) throw new HttpError(400, `status must be one of: ${ADMIN_STATUSES.join(', ')}`);
   const updated = await orders.setStatus(toInt(req.params.id), status);
   if (!updated) throw new HttpError(404, 'Order not found');
   res.json(updated);
 });
 
-// Admin: create the shipment (order becomes "shipped").
+// Admin: create the shipment (order becomes SHIPPED).
 router.post('/orders/:id/shipment', requireAuth, requireAdmin, async (req, res) => {
   requireFields(req.body, ['carrier', 'tracking_number']);
   const updated = await orders.createShipment(toInt(req.params.id), {

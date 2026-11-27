@@ -1,48 +1,45 @@
-import { db, nextId } from '../data/mockData.js';
+import { many, one, run } from '../db.js';
 import { HttpError } from '../utils/httpError.js';
 
-const withoutHash = ({ password_hash, ...user }) => user;
+// Every column except password_hash.
+const PUBLIC_COLUMNS = 'user_id, username, email, is_admin, created_at';
 
 // The only function that returns password_hash (needed by login).
 export async function findByUsernameWithHash(username) {
-  return db.users.find((u) => u.username.toLowerCase() === username.toLowerCase()) ?? null;
+  return one('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [username]);
 }
 
 export async function findById(id) {
-  const user = db.users.find((u) => u.user_id === id);
-  return user ? withoutHash(user) : null;
+  return one(`SELECT ${PUBLIC_COLUMNS} FROM users WHERE user_id = $1`, [id]);
 }
 
 export async function create({ username, email, password_hash }) {
-  if (db.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
+  // Checked here (case-insensitive) to give a clear message; the UNIQUE constraints are the backstop.
+  if (await one('SELECT 1 FROM users WHERE LOWER(username) = LOWER($1)', [username])) {
     throw new HttpError(409, 'Username is already taken');
   }
-  if (db.users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
+  if (await one('SELECT 1 FROM users WHERE LOWER(email) = LOWER($1)', [email])) {
     throw new HttpError(409, 'Email is already registered');
   }
-  const user = { user_id: nextId('users', 'user_id'), username, password_hash, email, is_admin: false, created_at: new Date().toISOString() };
-  db.users.push(user);
-  return withoutHash(user);
+  return one(
+    `INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING ${PUBLIC_COLUMNS}`,
+    [username, email, password_hash]
+  );
 }
 
 export async function list() {
-  return db.users.map(withoutHash);
+  return many(`SELECT ${PUBLIC_COLUMNS} FROM users ORDER BY user_id`);
 }
 
 export async function setAdmin(id, isAdmin) {
-  const user = db.users.find((u) => u.user_id === id);
-  if (!user) return null;
-  user.is_admin = isAdmin;
-  return withoutHash(user);
+  return one(`UPDATE users SET is_admin = $2 WHERE user_id = $1 RETURNING ${PUBLIC_COLUMNS}`, [id, isAdmin]);
 }
 
 export async function remove(id) {
-  const index = db.users.findIndex((u) => u.user_id === id);
-  if (index === -1) return false;
-  if (db.orders.some((o) => o.user_id === id)) {
+  // orders.user_id is ON DELETE RESTRICT; check first for a readable message.
+  if (await one('SELECT 1 FROM orders WHERE user_id = $1 LIMIT 1', [id])) {
     throw new HttpError(409, 'User has orders and cannot be deleted');
   }
-  db.reviews = db.reviews.filter((r) => r.user_id !== id); // reviews are deleted with the user
-  db.users.splice(index, 1);
-  return true;
+  // The user's reviews are removed by ON DELETE CASCADE.
+  return (await run('DELETE FROM users WHERE user_id = $1', [id])) > 0;
 }

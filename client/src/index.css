@@ -9,7 +9,8 @@ nav.top .brand { font-weight: 700; font-size: 1.2rem; }
 .stars { color: #e0a800; letter-spacing: 0.1em; }
 
 .badge { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 600; background: var(--pico-muted-border-color); }
-.badge.paid { background: #cfe2ff; color: #084298; }
+.badge.pending, .badge.preparing { background: #e2e3e5; color: #41464b; }
+.badge.paid, .badge.in_transit { background: #cfe2ff; color: #084298; }
 .badge.shipped { background: #fff3cd; color: #664d03; }
 .badge.delivered { background: #d1e7dd; color: #0f5132; }
 .badge.cancelled { background: #f8d7da; color: #842029; }

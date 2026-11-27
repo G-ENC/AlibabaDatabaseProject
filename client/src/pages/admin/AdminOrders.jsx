@@ -17,10 +17,11 @@ export default function AdminOrders() {
         Status
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All</option>
-          <option value="paid">Paid</option>
-          <option value="shipped">Shipped</option>
-          <option value="delivered">Delivered</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="PENDING">Pending</option>
+          <option value="PAID">Paid</option>
+          <option value="SHIPPED">Shipped</option>
+          <option value="DELIVERED">Delivered</option>
+          <option value="CANCELLED">Cancelled</option>
         </select>
       </label>
       {loading && <p aria-busy="true">Loading…</p>}
