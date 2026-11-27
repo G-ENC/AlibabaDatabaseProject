@@ -94,7 +94,7 @@ Reuse the mock data (same names, so screenshots stay the same), adapted:
 
 - Enable `db`: `postgres:17-alpine`, env `POSTGRES_USER/PASSWORD/DB`, volume `pgdata`, mount `./db/init:/docker-entrypoint-initdb.d:ro`.
 - Healthcheck `pg_isready`; `api` uses `depends_on: db: condition: service_healthy`.
-- `api` gets `DATABASE_URL=postgres://tradehub:tradehub@db:5432/tradehub`.
+- `api` gets `DATABASE_URL=postgres://app:<DB_PASSWORD>@db:5432/marketplace`.
 - **Do not publish port 5432** (only `web` on 80). Keeps the DB private on the VM.
 
 ### 2.4 Server: connect with `pg`
@@ -130,7 +130,7 @@ Delete `server/src/data/mockData.js` once all repos are SQL.
    `WHERE p.unit_price > (SELECT AVG(unit_price) FROM product WHERE category_id = p.category_id)`
 
 Put them in `docs/queries.sql`, run them in `psql`, and screenshot the results:
-`docker compose exec db psql -U tradehub -d tradehub -f /path` (or paste them).
+`docker compose exec -T db psql -U app -d marketplace < docs/queries.sql`.
 
 ### 2.7 Test checklist before moving on
 
@@ -166,7 +166,7 @@ Bonus (domain, ≤ 50 TL): buy a cheap domain, add an **A record** pointing to t
 
 | Chapter | Pts | Content | Source |
 |---|---|---|---|
-| Cover | — | Title "TradeHub — B2B Wholesale Marketplace", group 17, member names + IDs | — |
+| Cover | — | Title "Alibaba — B2B Wholesale Marketplace", group 17, member names + IDs | — |
 | 1 Introduction | 10 | The real-life problem: wholesale buying between businesses and suppliers (like Alibaba) | `docs/WEBAPP_PLAN.md` intro |
 | 2 Requirements | 10 | User expectations; **data to store** vs **operations on data**; screenshots of the app | `WEBAPP_PLAN.md` requirements + roles matrix |
 | 3 ER/EER | 15 | **New ER diagram** (Chen or crow's foot): 9 entities, relationships, cardinalities, attributes | Draw in draw.io / dbdiagram |

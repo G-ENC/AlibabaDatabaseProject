@@ -1,4 +1,4 @@
--- TradeHub sample data. Runs after 01_schema.sql on the first start of the db container.
+-- Alibaba Marketplace sample data. Runs after 01_schema.sql on the first start of the db container.
 -- Rows are inserted without ids, in a fixed order, so SERIAL gives 1, 2, 3 ...
 -- and rows added later from the web app continue from there.
 
@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- users 1..4   (test logins: admin/admin123, alice/user123, bob/user123, carol/user123)
 INSERT INTO users (username, password_hash, email, is_admin, created_at) VALUES
-  ('admin', crypt('admin123', gen_salt('bf', 10)), 'admin@tradehub.example', TRUE,  '2026-01-10 09:00'),
+  ('admin', crypt('admin123', gen_salt('bf', 10)), 'admin@alibaba.example', TRUE,  '2026-01-10 09:00'),
   ('alice', crypt('user123',  gen_salt('bf', 10)), 'alice@example.com',      FALSE, '2026-02-01 10:00'),
   ('bob',   crypt('user123',  gen_salt('bf', 10)), 'bob@example.com',        FALSE, '2026-02-15 11:30'),
   ('carol', crypt('user123',  gen_salt('bf', 10)), 'carol@example.com',      FALSE, '2026-03-20 15:45');

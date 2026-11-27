@@ -1,4 +1,4 @@
--- TradeHub schema: tables, view and indexes.
+-- Alibaba Marketplace schema: tables, view and indexes.
 -- Runs automatically on the first start of the db container (empty volume only).
 -- To run it again: docker compose down -v && docker compose up --build
 

@@ -16,7 +16,7 @@ export default function Navbar() {
   return (
     <nav className="container top">
       <ul>
-        <li><Link to="/" className="brand">TradeHub</Link></li>
+        <li><Link to="/" className="brand">Alibaba</Link></li>
       </ul>
       <ul>
         <li><NavLink to="/">Catalog</NavLink></li>

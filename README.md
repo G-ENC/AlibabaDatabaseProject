@@ -1,6 +1,6 @@
 # database-project-group-17
 
-TradeHub: an Alibaba-style B2B wholesale marketplace. Suppliers list products with a minimum order quantity,
+Alibaba Marketplace: a B2B wholesale marketplace modelled on Alibaba.com. Suppliers list products with a minimum order quantity,
 buyers place bulk orders, and admins manage the catalogue, orders and users.
 
 Course: CMPE341 Database Design & Management. Group members: _add names here_.
