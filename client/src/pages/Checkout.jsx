@@ -53,9 +53,12 @@ export default function Checkout() {
             <option value="bank_transfer">Bank transfer</option>
           </select>
         </label>
-        <p className="muted">Payment is simulated: no real card details are collected.</p>
+        <p className="muted">
+          You pay a 30% deposit now and the remaining balance later from the order page.
+          Payment is simulated: no real card details are collected.
+        </p>
         {error && <p className="error">{error}</p>}
-        <button type="submit" aria-busy={busy} disabled={busy}>Pay {money(total)}</button>
+        <button type="submit" aria-busy={busy} disabled={busy}>Pay deposit {money(Math.round(total * 30) / 100)}</button>
       </form>
     </>
   );

@@ -1,8 +1,8 @@
 # Web App Plan — Alibaba-style B2B Marketplace
 
-Scope of this document: everything **except** the database. The app is built first
-against in-memory data; the PostgreSQL database is plugged in later by rewriting
-one layer (the repositories, see §6). Nothing else should need to change.
+Scope of this document: the web app. It was built first against in-memory data; the
+PostgreSQL database (`db/init/`) was then plugged in by rewriting one layer (the
+repositories, see §6) with SQL via `pg`. Routes and frontend stayed the same.
 
 Guiding rule: **simple, working, understandable.** No TypeScript, no ORM, no state
 management library, no UI framework. Every team member should be able to read any file.
@@ -52,7 +52,7 @@ Suppliers are companies managed by admins; they do not log in.
 | Read reviews | ✓ | ✓ | ✓ |
 | Register / log in | ✓ | – | – |
 | Place an order (creates order + items + payment) | ✗ | ✓ | ✗ |
-| View own orders, cancel own order while not shipped | ✗ | ✓ | ✗ |
+| View own orders, pay balance, cancel own order while not shipped | ✗ | ✓ | ✗ |
 | Write / edit / delete **own** review | ✗ | ✓ | ✗ |
 | Delete **any** review | ✗ | ✗ | ✓ |
 | CRUD suppliers, categories, products | ✗ | ✗ | ✓ |
@@ -73,12 +73,13 @@ re-checks** (role + ownership). Hiding a button is not security.
    - checks each product exists, `quantity >= min_order_qty`, `quantity <= stock_quantity`;
    - copies the product's current `unit_price` into each order item;
    - decreases `stock_quantity`;
-   - creates the order with status `paid` and one payment row (`amount` = sum of items);
+   - creates the order with status `PENDING` and a `DEPOSIT` payment (30% of the total);
+   - the buyer later pays the rest (`POST /orders/:id/pay-balance`): a `BALANCE` payment, status `PAID`;
    - all of this is one transaction once the DB is connected.
-3. **Order status flow:** `paid → shipped → delivered`, or `paid → cancelled`. No other changes are allowed (409).
-   - User may cancel only while status is `paid`. Cancelling restores stock.
-   - Admin creating a shipment (`POST /orders/:id/shipment`) is the only way to reach `shipped`.
-   - Admin marks `delivered` with `PATCH /orders/:id/status` (also sets shipment `delivery_status = 'delivered'`).
+3. **Order status flow:** `PENDING → PAID → SHIPPED → DELIVERED`, or `PENDING/PAID → CANCELLED`. No other changes are allowed (409).
+   - Buyer or admin may cancel while status is `PENDING` or `PAID`. Cancelling restores stock.
+   - Admin creating a shipment (`POST /orders/:id/shipment`, status `IN_TRANSIT`) is the only way to reach `SHIPPED`.
+   - Admin marks `DELIVERED` with `PATCH /orders/:id/status` (also sets shipment `delivery_status = 'DELIVERED'`).
 4. **Order total** is never stored; it is computed from order items.
 5. **Reviews:** one per user per product, rating 1–5. (Optional stricter rule: only
    users with a delivered order containing that product may review.)
@@ -148,8 +149,7 @@ server/
       reviews.repo.js
       orders.repo.js       # orders + order_item + payment + shipment
       reports.repo.js
-    data/
-      mockData.js          # in-memory arrays used until the DB exists
+    db.js                  # pg Pool + helpers: many, one, run, withTransaction
     utils/
       validate.js          # tiny helpers: requireFields, toInt, isEmail...
       httpError.js         # class HttpError(status, message)
@@ -157,8 +157,8 @@ server/
 
 **The seam:** routes call repository functions only. Repository functions are
 `async` and return plain objects whose field names are **exactly the DB column names**
-(`snake_case`, e.g. `unit_price`, `min_order_qty`). Today they read/write arrays in
-`mockData.js`; later each body is replaced by one SQL query via `pg`. Route code,
+(`snake_case`, e.g. `unit_price`, `min_order_qty`). They started as in-memory arrays
+and are now SQL queries via `pg` (checkout and status changes run in transactions). Route code,
 frontend, and API stay unchanged.
 
 Example:
@@ -231,10 +231,11 @@ Success: the resource or array. Error: `{ "error": "message" }` with status
 | POST | `/orders` | user | `{items:[{product_id, quantity}], shipping_street, shipping_city, shipping_country, method}` |
 | GET | `/orders/mine` | user | |
 | GET | `/orders/:id` | owner or admin | items, payment, shipment, total |
-| PATCH | `/orders/:id/cancel` | owner | only when `paid` |
+| POST | `/orders/:id/pay-balance` | owner | only when `PENDING`; adds `BALANCE` payment → `PAID` |
+| PATCH | `/orders/:id/cancel` | owner | only when `PENDING` or `PAID` |
 | GET | `/orders?status=` | admin | |
-| PATCH | `/orders/:id/status` | admin | `{status}`; only `paid→cancelled` and `shipped→delivered` |
-| POST | `/orders/:id/shipment` | admin | `{carrier, tracking_number}` → status `shipped` |
+| PATCH | `/orders/:id/status` | admin | `{status}`; only `PENDING/PAID→CANCELLED` and `SHIPPED→DELIVERED` |
+| POST | `/orders/:id/shipment` | admin | `{carrier, tracking_number}` → status `SHIPPED` |
 
 ### Users & Reports
 | Method | Path | Access |
