@@ -54,7 +54,7 @@ export default function OrderDetail() {
             {order.items.map((i) => (
               <tr key={i.product_id}>
                 <td><Link to={`/products/${i.product_id}`}>{i.product_name}</Link></td>
-                <td>{money(i.unit_price)}</td>
+                <td>{money(i.price_at_order)}</td>
                 <td>{i.quantity}</td>
                 <td>{money(i.line_total)}</td>
               </tr>
@@ -85,7 +85,7 @@ export default function OrderDetail() {
           <h3>Shipment</h3>
           {order.shipment ? (
             <p>{order.shipment.carrier}, tracking {order.shipment.tracking_number}<br />
-              Shipped {date(order.shipment.ship_date)} · <StatusBadge status={order.shipment.delivery_status} /></p>
+              {order.shipment.ship_date ? `Shipped ${date(order.shipment.ship_date)}` : 'Not shipped yet'} · <StatusBadge status={order.shipment.delivery_status} /></p>
           ) : <p className="muted">{order.status === 'PENDING' ? 'Ships after the balance is paid.' : 'Not shipped yet.'}</p>}
         </article>
       </div>
@@ -101,6 +101,7 @@ export default function OrderDetail() {
       {user.is_admin && order.status === 'PAID' && (
         <article>
           <h3>Ship this order</h3>
+          {order.shipment && <p className="muted">Updates the prepared shipment and marks it in transit.</p>}
           <form onSubmit={ship} className="inline-form">
             <label>Carrier <input value={carrier} onChange={(e) => setCarrier(e.target.value)} required /></label>
             <label>Tracking number <input value={tracking} onChange={(e) => setTracking(e.target.value)} required /></label>

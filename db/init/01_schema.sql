@@ -49,7 +49,7 @@ CREATE TABLE order_item (
     order_id        INT NOT NULL REFERENCES orders(order_id)   ON DELETE CASCADE,
     product_id      INT  NOT NULL REFERENCES product(product_id) ON DELETE RESTRICT,
     quantity        INT   NOT NULL CHECK (quantity > 0),
-    unit_price      NUMERIC(12,2) NOT NULL CHECK (unit_price >= 0),
+    price_at_order  NUMERIC(12,2) NOT NULL CHECK (price_at_order >= 0),
     PRIMARY KEY (order_id, product_id)
 );
 CREATE TABLE payment (
@@ -79,7 +79,7 @@ CREATE TABLE review (
 
 
 CREATE VIEW order_total AS
-SELECT order_id, SUM(quantity * unit_price) AS total_amount
+SELECT order_id, SUM(quantity * price_at_order) AS total_amount
 FROM order_item
 GROUP BY order_id;
 

@@ -8,7 +8,7 @@ export const DEPOSIT_RATE = 0.3;
 // Order life cycle:
 //   checkout          -> PENDING   (DEPOSIT payment)
 //   payBalance        -> PAID      (BALANCE payment)
-//   createShipment    -> SHIPPED
+//   createShipment    -> SHIPPED   (shipment PREPARING/new -> IN_TRANSIT)
 //   setStatus         -> DELIVERED (from SHIPPED) or CANCELLED (from PENDING / PAID)
 const TRANSITIONS = {
   PENDING: ['CANCELLED'],
@@ -44,7 +44,7 @@ export async function getById(id) {
   if (!order) return null;
 
   const items = await many(
-    `SELECT oi.*, p.name AS product_name, oi.quantity * oi.unit_price AS line_total
+    `SELECT oi.*, p.name AS product_name, oi.quantity * oi.price_at_order AS line_total
      FROM order_item oi
      JOIN product p ON p.product_id = oi.product_id
      WHERE oi.order_id = $1
@@ -64,7 +64,7 @@ async function lockOrder(client, id) {
 }
 
 // Checkout, as ONE transaction: check minimum order quantity and stock, create the order and its
-// items (unit_price copied), reduce stock, record the DEPOSIT. Any error rolls all of it back.
+// items (price_at_order copied from unit_price), reduce stock, record the DEPOSIT. Any error rolls all of it back.
 export async function createOrder({ userId, items, shipping, method }) {
   const wanted = new Map(); // product_id -> quantity (duplicates merged)
   for (const item of items) {
@@ -101,7 +101,7 @@ export async function createOrder({ userId, items, shipping, method }) {
     for (const product of products) {
       const quantity = wanted.get(product.product_id);
       await run(
-        'INSERT INTO order_item (order_id, product_id, quantity, unit_price) VALUES ($1, $2, $3, $4)',
+        'INSERT INTO order_item (order_id, product_id, quantity, price_at_order) VALUES ($1, $2, $3, $4)',
         [order_id, product.product_id, quantity, product.unit_price],
         client
       );
@@ -175,24 +175,35 @@ export async function setStatus(id, newStatus) {
   return found ? getById(id) : null;
 }
 
-// Creates the shipment (IN_TRANSIT, shipped today) and moves PAID -> SHIPPED.
+// Ships the order: the shipment becomes IN_TRANSIT (shipped today) and the order moves PAID -> SHIPPED.
+// A PREPARING shipment that already exists is updated; otherwise a new one is created.
 export async function createShipment(id, { carrier, tracking_number }) {
   const found = await withTransaction(async (client) => {
     const order = await lockOrder(client, id);
     if (!order) return false;
     if (order.status !== 'PAID') throw new HttpError(409, `Only paid orders can be shipped (this one is ${order.status})`);
-    if (await one('SELECT 1 FROM shipment WHERE order_id = $1', [id], client)) {
+    const existing = await one('SELECT delivery_status FROM shipment WHERE order_id = $1', [id], client);
+    if (existing && existing.delivery_status !== 'PREPARING') {
       throw new HttpError(409, 'Order already has a shipment');
     }
-    if (await one('SELECT 1 FROM shipment WHERE tracking_number = $1', [tracking_number], client)) {
+    if (await one('SELECT 1 FROM shipment WHERE tracking_number = $1 AND order_id <> $2', [tracking_number, id], client)) {
       throw new HttpError(409, 'Tracking number is already used by another shipment');
     }
-    await run(
-      `INSERT INTO shipment (carrier, tracking_number, ship_date, delivery_status, order_id)
-       VALUES ($1, $2, CURRENT_DATE, 'IN_TRANSIT', $3)`,
-      [carrier, tracking_number, id],
-      client
-    );
+    if (existing) {
+      await run(
+        `UPDATE shipment SET carrier = $1, tracking_number = $2, ship_date = CURRENT_DATE, delivery_status = 'IN_TRANSIT'
+         WHERE order_id = $3`,
+        [carrier, tracking_number, id],
+        client
+      );
+    } else {
+      await run(
+        `INSERT INTO shipment (carrier, tracking_number, ship_date, delivery_status, order_id)
+         VALUES ($1, $2, CURRENT_DATE, 'IN_TRANSIT', $3)`,
+        [carrier, tracking_number, id],
+        client
+      );
+    }
     await run("UPDATE orders SET status = 'SHIPPED' WHERE order_id = $1", [id], client);
     return true;
   });

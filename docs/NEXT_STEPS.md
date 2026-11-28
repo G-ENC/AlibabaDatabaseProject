@@ -81,7 +81,7 @@ Reuse the mock data (same names, so screenshots stay the same), adapted:
 - `CREATE EXTENSION IF NOT EXISTS pgcrypto;` at the top. Passwords hashed in SQL:
   `crypt('admin123', gen_salt('bf', 10))` — produces bcrypt hashes that `bcryptjs` can verify.
 - Insert rows **without** explicit ids, in a fixed order, so SERIAL gives 1, 2, 3 … and new rows from the app don't collide.
-- users: admin, alice, bob (+1 more user is fine).
+- users: admin_ayse, buyer_john, buyer_maria, buyer_chen (same rows as the team pgAdmin database).
 - supplier 4, category 5 (one child: Smartphones → Electronics), product 8.
 - orders: 4 orders so every status appears: DELIVERED, SHIPPED, PAID, PENDING (optionally one CANCELLED).
 - order_item: 2 lines per order where possible.
@@ -114,7 +114,7 @@ Reuse the mock data (same names, so screenshots stay the same), adapted:
 | categories, suppliers | Plain CRUD; deletes rely on RESTRICT → 409 |
 | products | List with JOIN supplier + category; filters (search `ILIKE`, category, supplier) |
 | reviews | Average rating via `AVG(rating)` |
-| orders | `createOrder` in a **transaction**: lock products `SELECT ... FOR UPDATE`, check MOQ + stock, insert order, items (copy `unit_price`), reduce stock, insert DEPOSIT payment. `payBalance`, `setStatus`, `createShipment` also transactional. Totals from `order_total` view. |
+| orders | `createOrder` in a **transaction**: lock products `SELECT ... FOR UPDATE`, check MOQ + stock, insert order, items (copy `unit_price` into `price_at_order`), reduce stock, insert DEPOSIT payment. `payBalance`, `setStatus`, `createShipment` also transactional. Totals from `order_total` view. |
 | reports | The 3 queries as real SQL (below) |
 
 Always use `$1, $2` parameters, never string concatenation (SQL injection).
@@ -125,7 +125,7 @@ Delete `server/src/data/mockData.js` once all repos are SQL.
 1. **JOIN** — order lines with buyer, supplier, product:
    `orders ⋈ users ⋈ order_item ⋈ product ⋈ supplier`
 2. **GROUP BY + ORDER BY** — revenue per supplier, cancelled excluded, highest first:
-   `SUM(oi.quantity * oi.unit_price) ... GROUP BY s.supplier_id, s.company_name ORDER BY revenue DESC`
+   `SUM(oi.quantity * oi.price_at_order) ... GROUP BY s.supplier_id, s.company_name ORDER BY revenue DESC`
 3. **Subquery** — products priced above their category's average:
    `WHERE p.unit_price > (SELECT AVG(unit_price) FROM product WHERE category_id = p.category_id)`
 
@@ -135,7 +135,7 @@ Put them in `docs/queries.sql`, run them in `psql`, and screenshot the results:
 ### 2.7 Test checklist before moving on
 
 - [ ] `docker compose down -v && docker compose up --build` starts all 3 containers with data
-- [ ] Login works for admin / alice / bob
+- [ ] Login works for admin_ayse / buyer_john / buyer_maria
 - [ ] Checkout creates PENDING order + DEPOSIT payment; stock goes down
 - [ ] Pay balance → PAID; ship → SHIPPED; deliver → DELIVERED
 - [ ] Cancel restores stock
@@ -186,7 +186,7 @@ Entities: USERS, SUPPLIER, CATEGORY, PRODUCT, ORDERS, ORDER_ITEM, PAYMENT, SHIPM
 | CATEGORY classifies PRODUCT | 1 : N | product total participation |
 | CATEGORY has subcategory CATEGORY | 1 : N recursive | `parent_id` |
 | USERS places ORDERS | 1 : N | order total participation |
-| ORDERS contains PRODUCT | M : N via ORDER_ITEM (quantity, unit_price) | ORDER_ITEM is a weak/associative entity, PK (order_id, product_id) |
+| ORDERS contains PRODUCT | M : N via ORDER_ITEM (quantity, price_at_order) | ORDER_ITEM is a weak/associative entity, PK (order_id, product_id) |
 | ORDERS has PAYMENT | 1 : N | DEPOSIT + BALANCE |
 | ORDERS has SHIPMENT | 1 : 0..1 | `order_id UNIQUE` |
 | USERS reviews PRODUCT | M : N via REVIEW (rating, comment, date) | one review per user per product |

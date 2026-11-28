@@ -22,10 +22,10 @@ This starts three containers: `db` (PostgreSQL 17, created with tables and sampl
 
 | Role  | Username | Password   | Can do |
 |-------|----------|------------|--------|
-| Admin | `admin`  | `admin123` | everything: manage products, categories, suppliers, orders, users; view reports |
-| User  | `alice`  | `user123`  | browse, order (30% deposit, then pay balance), cancel own orders before shipping, write own reviews |
-| User  | `bob`    | `user123`  | same as alice |
-| User  | `carol`  | `user123`  | same as alice |
+| Admin | `admin_ayse`  | `admin123` | everything: manage products, categories, suppliers, orders, users; view reports |
+| User  | `buyer_john`  | `user123`  | browse, order (30% deposit, then pay balance), cancel own orders before shipping, write own reviews |
+| User  | `buyer_maria` | `user123`  | same as buyer_john |
+| User  | `buyer_chen`  | `user123`  | same as buyer_john |
 
 Anyone can also register a new account (always a normal user).
 

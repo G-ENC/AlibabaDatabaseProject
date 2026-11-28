@@ -11,8 +11,8 @@ export async function orderDetails() {
            s.company_name              AS supplier,
            p.name                      AS product,
            oi.quantity,
-           oi.unit_price,
-           oi.quantity * oi.unit_price AS line_total
+           oi.price_at_order,
+           oi.quantity * oi.price_at_order AS line_total
     FROM orders o
     JOIN users u       ON u.user_id     = o.user_id
     JOIN order_item oi ON oi.order_id   = o.order_id
@@ -28,7 +28,7 @@ export async function supplierRevenue() {
            s.country,
            COUNT(DISTINCT o.order_id)       AS orders,
            SUM(oi.quantity)                 AS units_sold,
-           SUM(oi.quantity * oi.unit_price) AS revenue
+           SUM(oi.quantity * oi.price_at_order) AS revenue
     FROM supplier s
     JOIN product p     ON p.supplier_id = s.supplier_id
     JOIN order_item oi ON oi.product_id = p.product_id

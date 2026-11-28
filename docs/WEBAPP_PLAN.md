@@ -71,7 +71,7 @@ re-checks** (role + ownership). Hiding a button is not security.
 2. **Checkout** sends cart items + shipping address + payment method in one request.
    The server:
    - checks each product exists, `quantity >= min_order_qty`, `quantity <= stock_quantity`;
-   - copies the product's current `unit_price` into each order item;
+   - copies the product's current `unit_price` into each order item's `price_at_order`;
    - decreases `stock_quantity`;
    - creates the order with status `PENDING` and a `DEPOSIT` payment (30% of the total);
    - the buyer later pays the rest (`POST /orders/:id/pay-balance`): a `BALANCE` payment, status `PAID`;
