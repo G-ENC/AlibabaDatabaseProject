@@ -69,7 +69,7 @@ export async function hasOrders(id) {
 
 export async function remove(id) {
   // order_item.product_id is ON DELETE RESTRICT; check first for a readable message.
-  if (await hasOrders(id)) throw new HttpError(409, 'Product appears in orders and cannot be deleted');
+  if (await hasOrders(id)) throw new HttpError(409, 'Product appears in orders; delete those orders first');
   // Its reviews are removed by ON DELETE CASCADE.
   return (await run('DELETE FROM product WHERE product_id = $1', [id])) > 0;
 }

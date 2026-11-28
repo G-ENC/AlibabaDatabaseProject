@@ -95,4 +95,10 @@ router.post('/orders/:id/shipment', requireAuth, requireAdmin, async (req, res) 
   res.status(201).json(updated);
 });
 
+// Admin: delete an order (items, payments and shipment are deleted with it).
+router.delete('/orders/:id', requireAuth, requireAdmin, async (req, res) => {
+  if (!(await orders.remove(toInt(req.params.id)))) throw new HttpError(404, 'Order not found');
+  res.status(204).end();
+});
+
 export default router;

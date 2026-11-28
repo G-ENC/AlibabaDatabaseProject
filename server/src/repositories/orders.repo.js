@@ -175,6 +175,26 @@ export async function setStatus(id, newStatus) {
   return found ? getById(id) : null;
 }
 
+// Admin: deletes the order. Its items, payments and shipment go with it (ON DELETE CASCADE).
+// Stock goes back for orders still in the warehouse (PENDING / PAID); a CANCELLED order already got it back.
+export async function remove(id) {
+  return withTransaction(async (client) => {
+    const order = await lockOrder(client, id);
+    if (!order) return false;
+    if (order.status === 'PENDING' || order.status === 'PAID') {
+      await run(
+        `UPDATE product p SET stock_quantity = p.stock_quantity + oi.quantity
+         FROM order_item oi
+         WHERE oi.order_id = $1 AND p.product_id = oi.product_id`,
+        [id],
+        client
+      );
+    }
+    await run('DELETE FROM orders WHERE order_id = $1', [id], client);
+    return true;
+  });
+}
+
 // Ships the order: the shipment becomes IN_TRANSIT (shipped today) and the order moves PAID -> SHIPPED.
 // A PREPARING shipment that already exists is updated; otherwise a new one is created.
 export async function createShipment(id, { carrier, tracking_number }) {

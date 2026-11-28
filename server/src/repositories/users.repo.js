@@ -38,7 +38,7 @@ export async function setAdmin(id, isAdmin) {
 export async function remove(id) {
   // orders.user_id is ON DELETE RESTRICT; check first for a readable message.
   if (await one('SELECT 1 FROM orders WHERE user_id = $1 LIMIT 1', [id])) {
-    throw new HttpError(409, 'User has orders and cannot be deleted');
+    throw new HttpError(409, 'User has orders; delete those orders first');
   }
   // The user's reviews are removed by ON DELETE CASCADE.
   return (await run('DELETE FROM users WHERE user_id = $1', [id])) > 0;

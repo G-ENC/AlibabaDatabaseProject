@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useApi } from '../useApi.js';
 import { useAuth } from '../auth/AuthContext.jsx';
@@ -9,6 +9,7 @@ import { date, money } from '../utils/format.js';
 export default function OrderDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: order, loading, error, reload } = useApi(`/orders/${id}`);
   const [carrier, setCarrier] = useState('');
   const [tracking, setTracking] = useState('');
@@ -33,6 +34,16 @@ export default function OrderDetail() {
   const payBalance = () => run(() => api.post(`/orders/${id}/pay-balance`));
   const cancelOwn = () => window.confirm('Cancel this order?') && run(() => api.patch(`/orders/${id}/cancel`));
   const cancelAsAdmin = () => window.confirm('Cancel this order?') && run(() => api.patch(`/orders/${id}/status`, { status: 'CANCELLED' }));
+  const deleteOrder = async () => {
+    if (!window.confirm(`Delete order #${order.order_id} with its items, payments and shipment? This cannot be undone.`)) return;
+    setActionError('');
+    try {
+      await api.del(`/orders/${id}`);
+      navigate('/admin/orders');
+    } catch (err) {
+      setActionError(err.message);
+    }
+  };
   const markDelivered = () => run(() => api.patch(`/orders/${id}/status`, { status: 'DELIVERED' }));
   const ship = (e) => {
     e.preventDefault();
@@ -111,6 +122,7 @@ export default function OrderDetail() {
       )}
       {user.is_admin && canCancel && <button className="secondary" onClick={cancelAsAdmin}>Cancel order</button>}
       {user.is_admin && order.status === 'SHIPPED' && <button onClick={markDelivered}>Mark as delivered</button>}
+      {user.is_admin && <button className="secondary contrast" onClick={deleteOrder}>Delete order</button>}
     </>
   );
 }
